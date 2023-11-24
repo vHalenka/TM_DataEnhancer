@@ -20,10 +20,14 @@ Then we take the convolutional window with the highest weight and select it as a
 ## Test:
 
 To show the main benefit of this method, a customary dataset has been created:
-
-![Dice set](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/03f35d25-3c46-41ce-971c-2684797ac74a)
+![image](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/2adbd004-fe35-494f-a8ba-2aae8a5203a8)
 
 Where a dice is randomly placed in an image.
 
 ### 1st Test:
+
+<img width="1131" alt="image" src="https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/52078f01-26ff-413d-b496-495a6ed36979">
+
+
+<img width="948" alt="image" src="https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/069bc726-3500-4abe-90d2-c75597ba517d">
 
