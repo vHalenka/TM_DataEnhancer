@@ -1,33 +1,27 @@
 # TM DataEnhancer
 
-The Data Enhancer concept is to take the learnt clauses, with the highest weights, from the first Tsetlin Machine and find their fitting convolutional windows in all images. Then map all other convolutional windows to that most important, and hence enhance the data.
+## Introduction
+TM DataEnhancer utilizes Tsetlin Machines to improve data quality by focusing on significant clauses and their corresponding convolutional windows in images. This approach aims to address challenges such as tracking moving objects in images by concentrating on their key features.
 
-The concept should tacke directly the issue of an object moving around in an image, by centering on its most important part.
+## Methodology
+- **Selection of Convolution Windows**: The first Tsetlin Machine identifies important convolution windows from the original images.
 
+  ![Matching Patches](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/53542f39-3992-443c-9ae8-3176262b4946)
 
+- **Anchor Window Identification**: The convolutional window with the highest weight is chosen as the 'Anchor'. All other windows are then related to this anchor to enhance the data.
 
-## Method:
-We select important convolution windows with the first Tsetlin Machine and find them in the original images:
+  ![img to Anchor](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/537abf09-62ed-483d-87d0-c8e6fc5eb3d3)
 
-![Matching Patches](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/53542f39-3992-443c-9ae8-3176262b4946)
+## Testing
+I used a custom dataset where dice are placed in random positions in images to test the effectiveness of this method.
 
-Then we take the convolutional window with the highest weight and select it as an Anchor, and relate all other convolutional windows to it.
-![img to Anchor](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/537abf09-62ed-483d-87d0-c8e6fc5eb3d3)
+### Test Results
+- **First Test**: Displayed noticeable improvement in data quality.
 
+  <img width="1131" alt="image" src="https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/52078f01-26ff-413d-b496-495a6ed36979">
 
+- **Second Test**: Confirmed the consistency of the improvement on a very fast and low effort run on the complete dataset.
 
+  ![bilde](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/ff8ae0f6-09e6-4348-bf29-2ad81a131872)
 
-## Test:
-
-To show the main benefit of this method, a customary dataset has been created:
-![image](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/2adbd004-fe35-494f-a8ba-2aae8a5203a8)
-
-Where a dice is randomly placed in an image.
-
-### 1st Test:
-
-<img width="1131" alt="image" src="https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/52078f01-26ff-413d-b496-495a6ed36979">
-
-
-<img width="948" alt="image" src="https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/069bc726-3500-4abe-90d2-c75597ba517d">
-
+Further tests are planned to continue evaluating and refining the method.
