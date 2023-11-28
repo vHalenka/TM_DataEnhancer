@@ -14,6 +14,7 @@ TM DataEnhancer utilizes Tsetlin Machines to improve data quality by focusing on
 
 ## Testing
 I used a custom dataset where dice are placed in random positions in images to test the effectiveness of this method.
+![image](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/79924ca6-fd41-40b5-a8a7-9bbcd6bd4be5)
 
 ### Test Results
 - **First Test**: Displayed noticeable improvement in data quality.
@@ -24,4 +25,8 @@ I used a custom dataset where dice are placed in random positions in images to t
 
   ![bilde](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/ff8ae0f6-09e6-4348-bf29-2ad81a131872)
 
-Further tests are planned to continue evaluating and refining the method.
+- **Third Test**:
+
+![image](https://github.com/vHalenka/TM_DataEnhancer/assets/148200081/7af940ba-e28e-49fc-835b-c26bfc3da678)
+
+This behaviour can be explained by the essence of the dataset and property of this approach. The current approach finds all matches of a particular patch and notes their average coordinate as the anchor point. Meaning, in the Enhancers view, the anchors are mostly put into exactly the same position, the middle of the die. What is strange
