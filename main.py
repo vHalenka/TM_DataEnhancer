@@ -40,17 +40,17 @@ setattr(plt, "show", lambda: plt.savefig("test.png")) #save instead of show all 
 #Parameters
 
 #TM
-epochs = 50
+epochs = 200
 max_included_literals = 200
-clauses = 4
+clauses = 20
 T = int((np.sqrt(clauses)/2 + 2)*10)
 s = 1.5
 step = 1
 
 #Data
-trained_labels = np.array([1,2])
-#trained_labels = np.arange(4)
-training_pool_size = 100 # number of testing pictures loaded
+#trained_labels = np.array([1,2])
+trained_labels = np.arange(9)
+training_pool_size = 300 # number of testing pictures loaded
 
 #preprocessing
 color_resolution = 2 # scaled colors to thermometer code size of..
@@ -71,9 +71,10 @@ random_placement=True
 
 # Second run parameters
 bypass_anchor_selection = True
-anchor_resolution=64
-n_anchor_points = 3 #if bypass, then only one selected
-
+anchor_resolution=32 #dir and dist have n bits each
+n_anchor_points = 5 
+if bypass_anchor_selection:
+    n_anchor_points = 1
         
 
 # %%
@@ -95,11 +96,11 @@ def dice_image(value, top_left=(0, 0), bottom_right=(32, 32), dice_size=8, rand_
     # Relative positions for the center of dice based on its value and dice size
     offset = dice_size // 4
     positions = {
-        4: [(-offset, -offset)],
-        5: [(-offset, -offset), (offset, offset)],
+        1: [(-offset, -offset)],
+        2: [(-offset, -offset), (offset, offset)],
         3: [(-offset, -offset), (0, 0), (offset, offset)],
-        2: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset)],
-        1: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset), (0, 0)],
+        4: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset)],
+        5: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset), (0, 0)],
         6: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset), (0, -offset), (0, offset)],
         7: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset), (0, 0), (0, -offset), (0, offset)],
         8: [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset), (0, -offset), (0, offset), (-offset, 0), (offset, 0)],
@@ -202,6 +203,7 @@ if use_debug_dataset: # Dataset selection
 
     plt.tight_layout()
     plt.show()
+    plt.savefig("Dataset.png")
     labels = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"]
     
 else:
@@ -403,15 +405,15 @@ print("Testing pictures:", X_test.shape[0])
 for label in range(trained_labels.shape[0]):
         print("\nAccuracy over %d epochs:\n" % (epochs))
         stopped = 0
-        tm = TMClassifier(clauses, T, s, max_included_literals=max_included_literals, patch_dim=(1,1), platform='CPU', weighted_clauses=True)
+        tm1 = TMClassifier(clauses, T, s, max_included_literals=max_included_literals, patch_dim=(1,1), platform='CPU', weighted_clauses=True)
         
         for epoch in tqdm(range(epochs)):
                 start_training = time()
-                tm.fit(X_train, Y_train)
+                tm1.fit(X_train, Y_train)
                 stop_training = time()
 
                 start_testing = time()
-                result_test = 100*(tm.predict(X_test) == Y_test).mean()
+                result_test = 100*(tm1.predict(X_test) == Y_test).mean()
                 result_test_adj = 100*(result_test/ (100*(training_data_labels.shape[0]/testing_data_labels.shape[0])))
                 
                 
@@ -421,11 +423,11 @@ for label in range(trained_labels.shape[0]):
                         stopped = 0
                         break
                 
-                logTest[epoch] = (tm.predict(X_test))*label
+                logTest[epoch] = (tm1.predict(X_test))*label
                 stop_testing = time()
 
-                result_train = 100*(tm.predict(X_train) == Y_train).mean()
-                logTrain[epoch] = (tm.predict(X_train))*label
+                result_train = 100*(tm1.predict(X_train) == Y_train).mean()
+                logTrain[epoch] = (tm1.predict(X_train))*label
 
                 #recall_and_precision(epoch)
 
@@ -438,7 +440,7 @@ f.close()
 
 # %%
 #Confusion Matrix TM 1
-conf_matrix1 = confusion_matrix(Y_test, tm.predict(X_test))
+conf_matrix1 = confusion_matrix(Y_test, tm1.predict(X_test))
 # Calculate percentages
 conf_matrix_percent1 = conf_matrix1 / conf_matrix1.sum(axis=1, keepdims=True) * 100
 conf_matrix_percent1 = np.nan_to_num(conf_matrix_percent1, 0)  # Replace NaNs with 0
@@ -525,7 +527,7 @@ def thermometer_to_integer(thermometer_bits, negated = 0):
     return value
 
 #TODO: tm.transform should be moved elsewhere, but transform_clause_to_patch wont compile without it
-bank = tm.transform(X_train) # bank is a (image, clause*class) sized array
+bank = tm1.transform(X_train) # bank is a (image, clause*class) sized array
 
 def transform_clause_to_patch(block, ID, resolution=8, patch_dim=(3,3), image_size=X_train_org.shape[1:3]):
     auxK = 0
@@ -576,10 +578,10 @@ def transform_clause_to_patch(block, ID, resolution=8, patch_dim=(3,3), image_si
 # Populate the patches list
 all_patches = np.array([], dtype=Patch) #class, clause
 k=0 # ID
-for Class in range(tm.number_of_classes):
+for Class in range(tm1.number_of_classes):
     class_patches = []
-    for Clause in range(tm.number_of_clauses):
-        block = [tm.get_ta_action(Clause, bit, Class) for bit in range(2*X_train.shape[3])]
+    for Clause in range(tm1.number_of_clauses):
+        block = [tm1.get_ta_action(Clause, bit, Class) for bit in range(2*X_train.shape[3])]
         class_patches.append(transform_clause_to_patch(block, k, resolution=color_resolution))
         k += 1
     all_patches = np.append(all_patches, class_patches)
@@ -589,17 +591,17 @@ for Class in range(tm.number_of_classes):
 # %%
 #Position Overlay
 
-fig, axs = plt.subplots(tm.number_of_classes, 2, figsize=(15, 15))  # Create a figure with two subplots
+fig, axs = plt.subplots(tm1.number_of_classes, 2, figsize=(15, 15))  # Create a figure with two subplots
 polarity_labels = ["Negative", "Positive"]
-heatmap = np.zeros((tm.number_of_classes,2,32,32), dtype=np.uint32)
+heatmap = np.zeros((tm1.number_of_classes,2,32,32), dtype=np.uint32)
 
-for Class in range(tm.number_of_classes):
+for Class in range(tm1.number_of_classes):
     # heatmap.append([])*
     for polarity in [0, 1]:
         # heatmap[Class].append([])
         # heatmap[Class][polarity].append(np.zeros((35, 35), dtype=np.uint16))
         count = 0
-        for patch in all_patches[Class*tm.number_of_clauses:(Class+1)*tm.number_of_clauses]:
+        for patch in all_patches[Class*tm1.number_of_clauses:(Class+1)*tm1.number_of_clauses]:
             #for weight in extreme_weights[-10:]:
             # Get the x and y ranges for the patch
             if (patch.xMax<patch.xMin):upOrDown = -1
@@ -706,7 +708,7 @@ def create_dist_and_dir_map(images, anchor_points,  n_anchor_points=2):
     - anchor_map: Array containing the encoded images.
     """
     num_images, height, width, _ = images.shape #patch_dim
-    anchor_map = np.zeros((num_images, height, width, tm.number_of_classes, n_anchor_points, 2), dtype=np.uint32)
+    anchor_map = np.zeros((num_images, height, width, n_anchor_points, 2), dtype=np.uint32)
     
     # if n_anchor_points > 1:
     #     origin_coord = origins[img]
@@ -716,16 +718,15 @@ def create_dist_and_dir_map(images, anchor_points,  n_anchor_points=2):
     for img in range(num_images):
         for j in range(height):
             for k in range(width):
-                for Class in range(tm.number_of_classes):
-                    for point in range(n_anchor_points):
-                        origin_coord = anchor_points[img, Class, point]
-                        # Check if the origin coordinate is a placeholder
-                        if np.any(origin_coord == -1):
-                            continue
-                        else:
-                            distance, angle = calculate_distance_and_direction(origin_coord, (j, k))
-                            anchor_map[img, k, j, Class, point, 1] = distance
-                            anchor_map[img, k, j, Class, point, 0] = angle
+                for point in range(n_anchor_points):
+                    origin_coord = anchor_points[img, point]
+                    # Check if the origin coordinate is a placeholder
+                    if np.any(origin_coord == -1):
+                        continue
+                    else:
+                        distance, angle = calculate_distance_and_direction(origin_coord, (j, k))
+                        anchor_map[img, k, j, point, 1] = distance
+                        anchor_map[img, k, j, point, 0] = angle
     return anchor_map
 
 
@@ -769,31 +770,37 @@ def calculate_distance_and_direction(coord1, coord2):
 
 # %%
 if bypass_anchor_selection:
-
     print("Bypassing the search of anchor points")
-    anchors_test = np.empty((X_test.shape[0], tm.number_of_classes, n_anchor_points, 2)) #img, class, point, coors[x,y]
+    anchors_test = np.empty((X_test.shape[0], n_anchor_points, 2)) #img, class, point, coors[x,y]
+    anchors_train = np.empty((X_train.shape[0], n_anchor_points, 2)) #img, class, point, coors[x,y]
 
-    for Class in range(tm.number_of_classes):
-        for img in range(X_test.shape[0]):
-            for point in range(n_anchor_points):
-                anchors_test[img, Class, point] = coors_test_org[img, :]
+    for img in range(X_test.shape[0]):
+        for point in range(n_anchor_points):
+            anchors_test[img, point] = coors_test_org[img, :]
+                
+
+    for img in range(X_train.shape[0]):
+        for point in range(n_anchor_points):
+            anchors_train[img, point] = coors_train_org[img, :]
+
     anchor_map_test = create_dist_and_dir_map(X_test, anchors_test, n_anchor_points=1)
+    anchor_map_train = create_dist_and_dir_map(X_train, anchors_train, n_anchor_points=1)
 
 
 else:
     # Find anchors on test data
-    counts = np.zeros((tm.number_of_clauses*tm.number_of_classes))
+    counts = np.zeros((tm1.number_of_clauses*tm1.number_of_classes))
     for image_results in X_test_all_results:
         for patch in image_results:
             patch_id = patch[0]
             counts[patch_id] += 1
     anchors_id = []
     # Initialize anchor_points
-    anchor_points = [[] for _ in range(tm.number_of_classes)]
+    anchor_points = [[] for _ in range(tm1.number_of_classes)]
     # Get anchor points for each class
-    for Class in range(tm.number_of_classes):
-        #anchor_ids = Class*tm.number_of_clauses + counts[Class*tm.number_of_clauses:(Class+1)*tm.number_of_clauses].argsort()[-2:]
-        anchor_ids = Class*tm.number_of_clauses + counts[Class*tm.number_of_clauses:(Class+1)*tm.number_of_clauses].argsort()
+    for Class in range(tm1.number_of_classes):
+        #anchor_ids = Class*tm1.number_of_clauses + counts[Class*tm1.number_of_clauses:(Class+1)*tm1.number_of_clauses].argsort()[-2:]
+        anchor_ids = Class*tm1.number_of_clauses + counts[Class*tm1.number_of_clauses:(Class+1)*tm1.number_of_clauses].argsort()
         #IDs now per class
         for anchor_id in anchor_ids: #per ID
             # Find the coordinates of the anchor patches
@@ -813,28 +820,22 @@ else:
 # %%
 if bypass_anchor_selection:
     print("Bypassing the search of anchor points")
-    anchors_train = np.empty((X_train.shape[0], tm.number_of_classes, n_anchor_points, 2)) #img, class, point, coors[x,y]
 
-    for Class in range(tm.number_of_classes):
-        for img in range(X_train.shape[0]):
-            for point in range(n_anchor_points):
-                anchors_train[img, Class, point] = coors_train_org[img, :]
-
-    anchor_map_train = create_dist_and_dir_map(X_train, anchors_train, n_anchor_points=1)
+ 
 else:
     #find anchors on train data
-    counts = np.zeros((tm.number_of_clauses*tm.number_of_classes))
+    counts = np.zeros((tm1.number_of_clauses*tm1.number_of_classes))
     for image_results in X_train_all_results:
         for patch in image_results:
             patch_id = patch[0]
             counts[patch_id] += 1
     anchors_id = []
     # Initialize anchor_points
-    anchor_points = [[] for _ in range(tm.number_of_classes)]
+    anchor_points = [[] for _ in range(tm1.number_of_classes)]
     # Get anchor points for each class
-    for Class in range(tm.number_of_classes):
-        #anchor_ids = Class*tm.number_of_clauses + counts[Class*tm.number_of_clauses:(Class+1)*tm.number_of_clauses].argsort()[-2:]
-        anchor_ids = Class*tm.number_of_clauses + counts[Class*tm.number_of_clauses:(Class+1)*tm.number_of_clauses]
+    for Class in range(tm1.number_of_classes):
+        #anchor_ids = Class*tm1.number_of_clauses + counts[Class*tm1.number_of_clauses:(Class+1)*tm1.number_of_clauses].argsort()[-2:]
+        anchor_ids = Class*tm1.number_of_clauses + counts[Class*tm1.number_of_clauses:(Class+1)*tm1.number_of_clauses]
         #IDs now per class
         for anchor_id in anchor_ids: #per ID
             # Find the coordinates of the anchor patches
@@ -870,13 +871,12 @@ def plot_images_with_coordinates(images, Y_images, anchor_points, square_size=10
 
     for img in range(n_images):
         ax[img].imshow(images[img])
-        for Class in range(anchor_points.shape[1]): #for each class
-            for anchor in range(anchor_points.shape[2]): #for each anchor point
-                x, y = anchor_points[img, Class, anchor]
-                if x == -1: # if its a placeholder, skip
-                    continue
-                rect = patches.Rectangle((x - square_size//2, y - square_size//2), square_size, square_size, linewidth=1, edgecolor='g', facecolor='none')
-                ax[img].add_patch(rect)
+        for anchor in range(anchor_points.shape[1]): #for each anchor point
+            x, y = anchor_points[img, anchor]
+            if x == -1: # if its a placeholder, skip
+                continue
+            rect = patches.Rectangle((x - square_size//2, y - square_size//2), square_size, square_size, linewidth=1, edgecolor='g', facecolor='none')
+            ax[img].add_patch(rect)
 
     plt.show()
 #print("te:", anchors_test[:1])
@@ -931,8 +931,6 @@ X_test2 = add_data_about_windows(
 )
 
 # %%
-print(anchor_map_train.shape)
-print(anchor_map_train[0,0,:5,0,0,:])
 
 
 # %%
@@ -940,12 +938,9 @@ print(thermometer_encode(anchor_map_train,resolution=16).shape)
 print(thermometer_encode(anchor_map_train,resolution=16)[0,0,:5,0,0,:])
 
 # %%
-print(X_train2.shape)
+
 decoded_patches_train = thermometer_decode(anchor_map_train, resolution=anchor_resolution)
-print(decoded_patches_train.shape)
-print(anchor_map_train.shape)
-print(decoded_patches_train[0,4,0,:,0])
-print(anchor_map_train[0,4,0,:,0])
+
 # Select a few sample images
 samples = decoded_patches_train[:3]
 for i, sample in enumerate(samples):
@@ -956,7 +951,7 @@ for i, sample in enumerate(samples):
         for k in range(2):  # Last dimension (features)
             # Create a subplot for each feature
             plt.subplot(1, 3, k + 1)
-            plt.imshow(sample[...,0, 0])  # Set aspect to 'auto'
+            plt.imshow(sample[..., 0])  # Set aspect to 'auto'
             fig.colorbar(im, ax=ax)
             plt.title(f'Sample {i+1}, Window {j+1}, Feature {k+1}')
         
@@ -994,15 +989,15 @@ print("Testing pictures:", X_test2.shape[0])
 for label in range(trained_labels.shape[0]):
         print("\nAccuracy over %d epochs:\n" % (epochs))
 
-        tm = TMClassifier(clauses, T, s, max_included_literals=max_included_literals, patch_dim=(1,1), platform='CPU', weighted_clauses=True)
+        tm2 = TMClassifier(clauses, T, s, max_included_literals=max_included_literals, patch_dim=(1,1), platform='CPU', weighted_clauses=True)
         
         for epoch in tqdm(range(epochs)):
                 start_training = time()
-                tm.fit(X_train2, Y_train)
+                tm2.fit(X_train2, Y_train)
                 stop_training = time()
 
                 start_testing = time()
-                result_test = 100*(tm.predict(X_test2) == Y_test).mean()
+                result_test = 100*(tm2.predict(X_test2) == Y_test).mean()
                 result_test_adj = 100*(result_test/ (100*(training_data_labels.shape[0]/testing_data_labels.shape[0])))
                 
                 if (result_test_adj == 100): #stopping condition
@@ -1011,11 +1006,11 @@ for label in range(trained_labels.shape[0]):
                         stopped = 0
                         break
                 
-                logTest[epoch] = (tm.predict(X_test2))*label
+                logTest[epoch] = (tm2.predict(X_test2))*label
                 stop_testing = time()
 
-                result_train = 100*(tm.predict(X_train2) == Y_train).mean()
-                logTrain[epoch] = (tm.predict(X_train2))*label
+                result_train = 100*(tm2.predict(X_train2) == Y_train).mean()
+                logTrain[epoch] = (tm2.predict(X_train2))*label
 
                 #recall_and_precision(epoch)
 
@@ -1028,13 +1023,13 @@ f.close()
 
 # %%
 #Confusion Matrix
-conf_matrix2 = confusion_matrix(Y_test, tm.predict(X_test2))
+conf_matrix2 = confusion_matrix(Y_test, tm2.predict(X_test2))
 # Calculate percentages
 conf_matrix_percent2 = conf_matrix2 / conf_matrix2.sum(axis=1, keepdims=True) * 100
 conf_matrix_percent2 = np.nan_to_num(conf_matrix_percent2, 0)  # Replace NaNs with 0
 
 # Plot the confusion matrix with percentages
-fig, axs = plt.subplots(1, 3, figsize=(48, 8))
+fig, axs = plt.subplots(1, 3, figsize=(32, 8))
 
 # Confusion Matrix run 1 (Percentages)
 sns.heatmap(conf_matrix_percent1, annot=True, fmt=".1f", cmap="Blues", xticklabels=labels, yticklabels=labels, ax=axs[0])
@@ -1059,3 +1054,5 @@ plt.show()
 
 
 # %%
+
+
